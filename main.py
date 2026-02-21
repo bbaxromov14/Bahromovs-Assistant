@@ -21,6 +21,9 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# ❗️ ВАЖНО: Создаем Flask приложение ЗДЕСЬ, в глобальной области видимости
+app = Flask(__name__)
+
 OWNER_ID = int(os.getenv("OWNER_ID", "0"))
 if OWNER_ID == 0:
     OWNER_ID = None
@@ -364,6 +367,7 @@ class TelegramAIBot:
             except Exception as e:
                 logger.exception(f"❌ Bot crashed: {e}")
                 await asyncio.sleep(5)
+
 # ===========================================
 # 8. ФУНКЦИЯ run_with_reconnect
 # ===========================================
