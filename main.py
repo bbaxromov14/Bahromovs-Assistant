@@ -1,66 +1,59 @@
 import os
 import sys
 import logging
-from flask import Flask
-from threading import Thread
 import asyncio
+import threading
+from flask import Flask
+from telethon import TelegramClient, events
+import google.generativeai as genai
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения
+load_dotenv()
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Flask приложение для поддержания активности
-app = Flask('')
+# Flask приложение
+app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "🤖 Бот Бахром работает!"
+    return "🤖 Бот Бахром работает! Я жив!"
 
 @app.route('/health')
 def health():
     return "OK", 200
 
+# Сюда вставьте ВЕСЬ ваш код бота (классы MemoryManager, StyleManager, GeminiResponder, TelegramAIBot)
+# Не удаляйте ничего из вашего original кода!
+
+# === ВСТАВЬТЕ СЮДА ВЕСЬ ВАШ ОРИГИНАЛЬНЫЙ КОД ===
+# (от начала файла до if __name__ == "__main__":)
+# Классы: MemoryManager, StyleManager, GeminiResponder, TelegramAIBot
+# Функции: detect_emotion, humanize, run_with_reconnect
+# === КОНЕЦ ВСТАВКИ ===
+
 def run_flask():
-    app.run(host='0.0.0.0', port=8080)
+    """Запускает Flask сервер"""
+    port = int(os.environ.get('PORT', 10000))
+    logger.info(f"Запуск Flask сервера на порту {port}")
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
-def keep_alive():
-    """Запускает Flask сервер в отдельном потоке"""
-    t = Thread(target=run_flask)
-    t.daemon = True
-    t.start()
-    logger.info("Flask сервер запущен для поддержания активности")
-
-# Импортируем ваш бот
-try:
-    # Переименуйте ваш файл или импортируйте напрямую
-    # Если файл называется bybahromoov.py:
-    import bybahromoov as bot_module
-    
-    # Если нужно запустить бот из вашего модуля
-    def run_bot():
-        """Запускает вашего бота"""
-        logger.info("Запуск бота Бахром...")
-        # Создаем и запускаем бот
-        if hasattr(bot_module, 'TelegramAIBot'):
-            bot = bot_module.TelegramAIBot()
-            asyncio.run(bot.run())
-        else:
-            # Если бот запускается другим способом
-            logger.error("Не удалось найти класс TelegramAIBot")
-            
-except ImportError as e:
-    logger.error(f"Ошибка импорта бота: {e}")
-    # Альтернативный вариант - запуск через subprocess
-    import subprocess
-    def run_bot():
-        subprocess.run([sys.executable, "bybahromoov.py"])
+def run_bot():
+    """Запускает Telegram бота"""
+    logger.info("Запуск Telegram бота...")
+    try:
+        asyncio.run(run_with_reconnect())
+    except Exception as e:
+        logger.exception(f"Бот упал с ошибкой: {e}")
 
 if __name__ == "__main__":
-    # Запускаем Flask для поддержания активности
-    keep_alive()
+    # Запускаем Flask в отдельном потоке
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    logger.info("Flask поток запущен")
     
-    # Запускаем бота
-    try:
-        run_bot()
-    except Exception as e:
-        logger.exception(f"Критическая ошибка бота: {e}")
+    # Запускаем бота в основном потоке
+    run_bot()
