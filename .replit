@@ -1,0 +1,7 @@
+run = "python main.py"
+
+[env]
+PYTHONPATH = "${PYTHONPATH}:."
+
+[nix]
+channel = "stable-22_11"
