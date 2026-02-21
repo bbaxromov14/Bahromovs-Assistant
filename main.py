@@ -9,6 +9,7 @@ import threading
 from datetime import timedelta
 from flask import Flask
 from telethon import TelegramClient, events
+from telethon.sessions import StringSession
 from telethon.errors import FloodWaitError
 from dotenv import load_dotenv
 import google.generativeai as genai
@@ -201,7 +202,7 @@ class UserDataCleaner:
                 logger.info(f"Cleaned up {len(to_remove)} inactive users")
 
 # ===========================================
-# 7. КЛАСС TelegramAIBot
+# 7. КЛАСС TelegramAIBot (ИСПРАВЛЕННЫЙ)
 # ===========================================
 class TelegramAIBot:
     MY_NAMES = ["Bahrom", "Baxrom", "Бахром", "aytchi", "iltmos yordam bering"]
@@ -216,7 +217,16 @@ class TelegramAIBot:
         if not self.api_id or not self.api_hash or not self.bot_token:
             raise ValueError("Missing ENV variables")
 
-        self.client = TelegramClient("session", self.api_id, self.api_hash)
+        # ИСПРАВЛЕНИЕ: Используем StringSession вместо файла
+        from telethon.sessions import StringSession
+        session_string = os.getenv("SESSION_STRING", "")
+        if session_string:
+            # Если есть сохраненная сессия, используем её
+            self.client = TelegramClient(StringSession(session_string), self.api_id, self.api_hash)
+        else:
+            # Если нет, создаем новую сессию в памяти
+            self.client = TelegramClient(StringSession(), self.api_id, self.api_hash)
+        
         self.memory = MemoryManager()
         self.style = StyleManager()
         self.ai = GeminiResponder(os.getenv("GEMINI_API_KEY"))
@@ -336,19 +346,24 @@ class TelegramAIBot:
     async def run(self):
         while True:
             try:
-                self.client = TelegramClient("session", self.api_id, self.api_hash)
+                # ИСПРАВЛЕНИЕ: Убрали создание нового client, используем существующий
                 await self.client.start(bot_token=self.bot_token)
                 me = await self.client.get_me()
                 self.my_id = me.id
+                
+                # Сохраняем строку сессии для будущих запусков (полезно при первом запуске)
+                if not os.getenv("SESSION_STRING"):
+                    session_string = self.client.session.save()
+                    logger.info(f"✨ СОХРАНИТЕ ЭТУ СТРОКУ В ПЕРЕМЕННУЮ SESSION_STRING: {session_string}")
+                
                 asyncio.create_task(self.memory.autosave_loop())
                 asyncio.create_task(self.cleaner.cleanup_loop())
-                logger.info("BOT STARTED")
+                logger.info("✅ BOT STARTED SUCCESSFULLY!")
                 self.client.add_event_handler(self.on_message, events.NewMessage(incoming=True))
                 await self.client.run_until_disconnected()
             except Exception as e:
-                logger.exception(e)
+                logger.exception(f"❌ Bot crashed: {e}")
                 await asyncio.sleep(5)
-
 # ===========================================
 # 8. ФУНКЦИЯ run_with_reconnect
 # ===========================================
