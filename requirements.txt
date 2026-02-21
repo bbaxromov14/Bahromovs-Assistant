@@ -5,7 +5,6 @@ google-generativeai==0.8.3
 flask==3.0.3
 
 # Дополнительные (могут понадобиться)
-cryptg==0.4.0
 cryptography==43.0.1
 aiohttp==3.10.5
 asyncio==3.4.3
